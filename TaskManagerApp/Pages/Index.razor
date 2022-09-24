@@ -1,0 +1,33 @@
+﻿@page "/"
+
+<PageTitle>Task Manager App</PageTitle>
+
+<div>
+    <label>Task <input @bind="Task"/><button type="button" @onclick="Save">Save</button></label>
+    <div>@ErrorMessage</div>
+</div>
+<div style="margin-top: 10px;">
+    <ul>
+        @foreach (var task in Tasks)
+        {
+            <li>@task</li>
+        }
+    </ul>
+</div>
+
+@code{
+    private string ErrorMessage;
+    private string Task;
+    private List<string> Tasks = new List<string>();
+
+    private void Save(){
+        if (string.IsNullOrWhiteSpace(Task)){
+            ErrorMessage = "Task must not be empty.";
+            return;
+        }
+
+        Tasks.Add(Task);
+        Task = string.Empty;       
+        ErrorMessage = string.Empty;
+    }
+}
