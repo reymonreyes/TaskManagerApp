@@ -4,6 +4,7 @@
 @using Models = TaskManagerApp.Models;
 @using TaskManagerApp.Data
 @inject IDbContextFactory<TaskManagerAppContext> DbFactory
+@attribute [Authorize]
 
 <PageTitle>Task Manager App</PageTitle>
 

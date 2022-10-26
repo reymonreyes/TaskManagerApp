@@ -7,4 +7,11 @@
 
 <PageTitle>Task Manager App</PageTitle>
 <h1>Welcome to Task Manager App!</h1>
-<h2>Please <a href="identity/account/account">login</a> to manage your tasks.</h2>
+<AuthorizeView>
+    <Authorized>
+        Hi @context.User.Identity.Name
+    </Authorized>
+    <NotAuthorized>
+        <h2>Please <a href="identity/account/login">login</a> to manage your tasks.</h2>
+    </NotAuthorized>
+</AuthorizeView>
