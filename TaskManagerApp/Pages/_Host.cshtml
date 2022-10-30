@@ -1,8 +1,11 @@
 ﻿@page "/"
 @namespace TaskManagerApp.Pages
+@using Microsoft.AspNetCore.Antiforgery
 @addTagHelper *, Microsoft.AspNetCore.Mvc.TagHelpers
+@inject IAntiforgery Antiforgery
 @{
     Layout = "_Layout";
+    var requestToken = Antiforgery.GetAndStoreTokens(HttpContext).RequestToken;
 }
 
-<component type="typeof(App)" render-mode="ServerPrerendered" />
+<component type="typeof(App)" render-mode="ServerPrerendered" param-RequestToken="requestToken"/>

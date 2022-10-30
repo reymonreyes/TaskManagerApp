@@ -1,13 +1,22 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Web;
 using TaskManagerApp.Data;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using TaskManagerApp.Areas.Identity.Data;
 
 var builder = WebApplication.CreateBuilder(args);
+var connectionString = builder.Configuration.GetConnectionString("TaskManagerAppContextConnection") ?? throw new InvalidOperationException("Connection string 'TaskManagerAppIdentityContextConnection' not found.");
 
 // Add services to the container.
 builder.Services.AddRazorPages();
 builder.Services.AddServerSideBlazor();
 builder.Services.AddDbContextFactory<TaskManagerAppContext>();
+builder.Services.AddDbContext<TaskManagerAppIdentityContext>(opts => opts.UseSqlServer(connectionString));
+builder.Services.AddScoped<TokenProvider>();
+
+builder.Services.AddDefaultIdentity<TaskManagerAppUser>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores<TaskManagerAppIdentityContext>();
 
 var app = builder.Build();
 
@@ -27,5 +36,7 @@ app.UseRouting();
 
 app.MapBlazorHub();
 app.MapFallbackToPage("/_Host");
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.Run();

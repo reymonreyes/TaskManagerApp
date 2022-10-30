@@ -1,0 +1,19 @@
+﻿@using TaskManagerApp.Data
+@inject TokenProvider TokenProvider
+
+<AuthorizeView>
+    <Authorized>
+        Hi @context.User.Identity.Name
+        
+        <form method="post" action="identity/account/logout?returnUrl=/">
+            <input type="hidden" name="__RequestVerificationToken" value="@TokenProvider.RequestToken"/>
+            <button type="submit" class="btn btn-link">Logout</button>
+        </form>
+    </Authorized>
+    <NotAuthorized>
+        <a href="identity/account/login">Login</a>
+    </NotAuthorized>
+</AuthorizeView>
+@code {
+
+}
