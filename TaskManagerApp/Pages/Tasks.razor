@@ -4,20 +4,36 @@
 @using Models = TaskManagerApp.Models;
 @using TaskManagerApp.Data
 @inject IDbContextFactory<TaskManagerAppContext> DbFactory
+@inject AppConfig AppConfig
+@inject IJSRuntime JS
 @attribute [Authorize]
 <PageTitle>Task Manager App</PageTitle>
 
 <div class="row">
     <form class="col-6">
-        <div class="input-group">
-            <label class="input-group-text">Task</label>
-            <input @bind="_TaskContent" class="form-control"/>
-            <button type="button" @onclick="Save" class="btn btn-outline-primary">Save</button>
-        </div>
-        @if(!string.IsNullOrEmpty(ErrorMessage)){
-            <div class="alert alert-danger mt-1">@ErrorMessage</div>      
-        }
-
+        <div class="card">            
+            <div class="card-body">
+                <div class="input-group">
+                    <label class="input-group-text">Task</label>
+                    <input @bind="_TaskContent" class="form-control" />
+                    <button type="button" @onclick="Save" class="btn btn-outline-primary">Save</button>
+                </div>
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <div class="alert alert-danger mt-1">@ErrorMessage</div>
+                }
+                <div class="pt-2">
+                    <div class="py-1">Attachments(maximum of 3)</div>
+                    <ul class="list-group pt-1">
+                        @foreach (var attachment in _Attachments)
+                        {
+                            <li class="list-group-item">@attachment.Filename</li>
+                        }
+                    </ul>
+                    <InputFile OnChange="UploadFiles" multiple class="mt-1"/>
+                </div>
+            </div>
+        </div>        
     </form>
 </div>
 @if(ShowConfirmDeleteOption){
@@ -34,16 +50,34 @@
     </div>
 </div>
 }
-<div class="row my-3">
+<div class="row mt-1">
     <div class="col-6">
         <ul class="list-group">
             @foreach (var task in MyTasks)
             {
                 <li class="list-group-item">
-                    <button @onclick="() => ConfirmDelete(task)" class="btn btn-danger btn-sm">Delete</button>
-                    <button @onclick="() => Edit(task)" class="btn btn-primary btn-sm">Edit</button>
-                    <button @onclick="() => Done(task)" class="btn btn-success btn-sm">Done</button>
-                    <span style="text-decoration: @(task.IsDone ? "line-through": "none")">@task.Content</span>
+                    <div class="row">
+                        <div class="col-3">
+                            <button @onclick="() => ConfirmDelete(task)" class="btn btn-danger btn-sm">Delete</button>
+                            <button @onclick="() => Edit(task)" class="btn btn-primary btn-sm">Edit</button>
+                            <button @onclick="() => Done(task)" class="btn btn-success btn-sm">Done</button>
+                        </div>
+                        <div class="col-9">
+                            <div style="text-decoration: @(task.IsDone ? "line-through": "none")">@task.Content</div>
+                            @if(task.Attachments != null && task.Attachments.Count > 0)
+                            {
+                                <span style="font-size:small">Attachments</span>
+                                <ul>
+                                    @foreach (var attachment in task.Attachments)
+                                    {
+                                        <li>
+                                            <button class="btn btn-link" @onclick="() => DownloadAttachment(attachment.InternalFilename, attachment.Filename)">@attachment.Filename</button>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    </div>
                 </li>
             }
         </ul>
@@ -55,6 +89,7 @@
     private string _TaskContent;
     private Models.Task? _Task = null;
     private List<Models.Task> MyTasks = new List<Models.Task>();
+    private List<Models.Attachment> _Attachments = new List<Models.Attachment>();
 
     protected override void OnInitialized()
     {
@@ -73,6 +108,7 @@
             var task = new Models.Task { Content = _TaskContent };
             using (var dbFactory = DbFactory.CreateDbContext())
             {
+                task.Attachments = _Attachments;
                 dbFactory.Tasks.Add(task);
                 dbFactory.SaveChanges();
             }
@@ -92,6 +128,7 @@
             _Task = null;
         }
         _TaskContent = string.Empty;
+        _Attachments = new List<Models.Attachment>();
         ErrorMessage = string.Empty;
     }
 
@@ -140,7 +177,42 @@
     {
         using (var dbFactory = DbFactory.CreateDbContext())
         {
-            MyTasks = dbFactory.Tasks.ToList();
+            MyTasks = dbFactory.Tasks.Include(i => i.Attachments).ToList();
         }
+    }
+
+    private async Task UploadFiles(InputFileChangeEventArgs evt)
+    {
+        ErrorMessage = "";
+        var maxFileSize = 1024 * 1024 * 5;
+
+        if (evt.FileCount > 3)
+        {
+            ErrorMessage = "Maximum files allowed is 3.";
+            return;
+        }
+
+        foreach (var file in evt.GetMultipleFiles(3))
+        {
+            var internalFilename = Path.GetRandomFileName() + Path.GetExtension(file.Name);
+            var savePath = Path.Combine(AppConfig.UploadsDirFullPath, internalFilename);
+            await using FileStream fStream = new FileStream(savePath, FileMode.Create);
+            await file.OpenReadStream().CopyToAsync(fStream);
+
+            var attachment = new Models.Attachment();
+            attachment.InternalFilename = internalFilename;
+            attachment.Filename = file.Name;
+
+            _Attachments.Add(attachment);
+        }
+    }
+
+    private async Task DownloadAttachment(string internalFilename, string filename)
+    {
+        var fullPath = Path.Combine(AppConfig.UploadsDirFullPath, internalFilename);
+        var fileStream = File.OpenRead(fullPath);
+        using var streamRef = new DotNetStreamReference(stream: fileStream);
+
+        await JS.InvokeVoidAsync("downloadFileFromStream", filename, streamRef);
     }
 }

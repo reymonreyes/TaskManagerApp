@@ -7,4 +7,8 @@
 
 <PageTitle>Task Manager App</PageTitle>
 <h1>Welcome to Task Manager</h1>
-<h2>Please login to view your tasks.</h2>
+<AuthorizeView>
+    <NotAuthorized>
+        <h2>Please login to view your tasks.</h2>
+    </NotAuthorized>
+</AuthorizeView>
